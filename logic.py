@@ -5,69 +5,58 @@ class Group(object):
     the position of stones and liberties."""
     def __init__(self, color):
         self.color = color
-        self.stones = set([])
-        self.liberties = set([])
+        self.stones = set()
+        self.liberties = set()
     def addStone(self, position):
         self.stones.add(position)
     def addLiberties(self, liberties):
         self.liberties.update(liberties)
-    def removeLiberties(self, liberties):
-        for lib in liberties:
-            self.liberties.remove(lib)
     def inAtari(self):
         return len(self.liberties) == 1
     def connect(self, groups):
         for group in groups:
-            self.stones = self.stones.union(group.stones)
-            self.liberties = self.liberties.union(group.liberties)
+            self.stones |= group.stones
+            self.liberties |= group.liberties
 
 class Board(object):
     """ Holds all information about all groups and size of the board """
     def __init__(self, size):
         self.size = size
-        self.groups = []
+        self.groups = set()
         self.ko = None
     def addGroup(self, color, pos, libs):
         new_group = Group(color)
         new_group.addStone(pos)
         new_group.addLiberties(libs)
-        self.groups.append(new_group)
+        self.groups.add(new_group)
     def removeGroups(self, groups):
-        if isinstance(groups, Group):
-            self.groups.remove(groups)
-        else:
-            for group in groups:
-                self.groups.remove(group)
+        for group in groups:
+            self.groups.remove(group)
     def addStone(self, pos, color):
         # Return True or False based on success.
         if self.badPos(pos):
             return False
-        p1, p2, liberties = self.getNeighbors(self.getValidPositions(pos), color)
-        koStatus = self.koHandler(pos, p1, p2, liberties)
-        if koStatus == None:
-            if self.illegalMove(p1, liberties):
-                return False
-            self.ko = None
-        elif not koStatus:
+        p1, p2, liberties = self.getNeighbors(self.getValidAdjPositions(pos),
+                                              color)
+        if not self.legalMove(pos, p1, p2, liberties):
             return False
         for group in p2:
             if group.inAtari():
                 liberties = self.freeLiberties(group, pos, liberties)
                 self.groups.remove(group)
-        if p1 == []:
+        if not p1:
             self.addGroup(color, pos, liberties)
         else:
-            base_group = p1[0]
-            rest = p1[1:]
+            base_group = p1.pop(); rest = p1
             base_group.addStone(pos)
             base_group.addLiberties(liberties)
             base_group.connect(rest)
             base_group.liberties.remove(pos)
             self.removeGroups(rest)
         for group in p2:
-            group.removeLiberties([pos])
+            group.liberties.remove(pos)
         return True
-    def getValidPositions(self, pos):
+    def getValidAdjPositions(self, pos):
         #returns positions in range of the board size
         adj_positions = self.getAdjacent(pos)
         valid_positions = []
@@ -79,44 +68,42 @@ class Board(object):
         #returns a tuple containing a list of the current players groups,
         #a list of the opponents groups, and a list of coordinates corresponding
         #to liberties.
-        p1 = []; p2 = []; liberties = []
+        p1 = set(); p2 = set(); liberties = set()
         for position in positions:
             neighbor = self.getNeighborAt(position)
-            if isinstance(neighbor, Group):
-                if neighbor.color == color and neighbor not in p1:
-                    p1.append(neighbor)
-                elif neighbor.color != color and neighbor not in p2:
-                    p2.append(neighbor)
-            else:
-                liberties.append(neighbor)
+            if neighbor is not None:
+                if neighbor.color == color: player = p1
+                else: player = p2
+                player.add(neighbor)
+            else: liberties.add(position)
         return (p1, p2, liberties)
     def getNeighborAt(self, position):
-        #returns a group object, or a position corresponding to a liberty
+        # returns the group at this position if there is one
         for group in self.groups:
             if position in group.stones:
                 return group
-        return position
-    def getAdjacent(self, position):
-        return (shiftPos(position, UP), shiftPos(position, RIGHT),
-                shiftPos(position, DOWN), shiftPos(position, LEFT))
+        return None
+    def getAdjacent(self, pos):
+        return tuple(shiftPos(pos, dir) for dir in (UP, RIGHT, DOWN, LEFT))
     def freeLiberties(self, group, pos, liberties):
         for position in group.stones:
-            adj_positions = self.getAdjacent(position)
-            for adj_position in adj_positions:
+            for adj_position in self.getAdjacent(position):
                 neighbor = self.getNeighborAt(adj_position)
-                if isinstance(neighbor, Group) and neighbor.color != group.color:
+                if neighbor is not None and neighbor.color != group.color:
                     neighbor.liberties.add(position)
-                elif neighbor == pos:
-                    liberties.append(position)
+                elif adj_position == pos:
+                    liberties.add(position)
         return liberties
-    def illegalMove(self, p1, liberties):
-        if liberties == []:
+    def suicideMove(self, p1, liberties, captured):
+        # I think you had a bug here before when you weren't checking captures
+        if captured: return False
+        if not liberties:
             for group in p1:
-                if group.inAtari(): pass
-                else: return False
+                if not group.inAtari(): return False
             return True
         else: return False
-    def koHandler(self, pos, p1, p2, liberties):
+    def legalMove(self, pos, p1, p2, liberties):
+        # handle ko first
         captured = []
         for group in p2:
             if group.inAtari():
@@ -127,9 +114,13 @@ class Board(object):
                 if pos == self.ko:
                     return False
                 else:
-                    for stone in group.stones:
-                        self.ko = stone
+                    for pos in group.stones:
+                        self.ko = pos
                     return True
+        if self.suicideMove(p1, liberties, captured):
+            return False
+        self.ko = None
+        return True
     def badPos(self, pos):
         for group in self.groups:
             for stone in group.stones:

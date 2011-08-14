@@ -1,35 +1,34 @@
 import pygame
 import sys
 from logic import *
-from drawing import draw_board, draw_stones
+from drawing import IMAGE_SIZE, scale, draw_board, draw_stones
+
+BLACK = 0; WHITE = 1
 
 class GameState(object):
     def __init__(self, player_turn):
         self.player_color = player_turn
     def nextTurn(self):
-        if self.player_color == WHITE:
-           self.player_color = BLACK
-        else: self.player_color = WHITE
+        # assumes colors are 0 and 1
+        self.player_color = int(not self.player_color)
     def getTurn(self):
         return self.player_color
 
 pygame.init()
 running = True
-corner = pygame.image.load("images/corner.bmp")
-intersection = pygame.image.load("images/intersection.bmp")
-side = pygame.image.load("images/side.bmp")
-black_stone = pygame.image.load("images/bstone.bmp")
-black_stone.set_colorkey((255,0,0))
-white_stone = pygame.image.load("images/wstone.bmp")
-white_stone.set_colorkey((255,0,0))
-board_size = 9
-window_size = (board_size*32, board_size*32)
-screen = pygame.display.set_mode(window_size)
-draw_board(board_size, screen, corner, side, intersection)
-WHITE = 0
-BLACK = 1
+board_size = 19
 game_state = GameState(BLACK)
 board = Board(board_size)
+
+corner, intersection, side, black_stone, white_stone = tuple(
+    pygame.image.load('images/%s.bmp' % fname)
+    for fname in ('corner', 'intersection', 'side', 'bstone', 'wstone'))
+black_stone.set_colorkey((255,0,0))
+white_stone.set_colorkey((255,0,0))
+
+window_size = scale(IMAGE_SIZE, (board_size,)*2)
+screen = pygame.display.set_mode(window_size)
+draw_board(board_size, screen, corner, side, intersection)
 
 def debug(board):
     print board.ko
@@ -41,6 +40,7 @@ def debug(board):
         print
         print group.liberties
         print
+
 while running:
     pygame.display.flip()
     for event in pygame.event.get():
@@ -49,8 +49,8 @@ while running:
         elif event.type == pygame.MOUSEBUTTONUP:
             x, y = pygame.mouse.get_pos()
             turn = game_state.getTurn()
-            pos = (x/32, y/32)
-            if board.addStone((x/32,y/32), turn):
+            pos = (x/IMAGE_SIZE, y/IMAGE_SIZE)
+            if board.addStone(pos, turn):
                 draw_board(board_size, screen, corner, side, intersection)
                 draw_stones(screen, board, black_stone, white_stone)
                 game_state.nextTurn()
