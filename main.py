@@ -1,6 +1,5 @@
 import pygame
 import sys
-from resource import ResourceImage, ResourceLoader
 from logic import *
 from drawing import scale, Renderer
 
@@ -23,15 +22,8 @@ game_state = GameState(BLACK)
 board = Board(board_size)
 window_size = scale(IMAGE_SIZE, (board_size,)*2)
 screen = pygame.display.set_mode(window_size)
-renderer = Renderer(screen, IMAGE_SIZE)
-images = tuple(ResourceImage(name, renderer) 
-               for name in ('corner', 'intersection', 'side', 
-                            'bstone', 'wstone'))
-RL = ResourceLoader('images', images)
-RL.loadImages()
-corner, intersection, side, black_stone, white_stone = images
-renderer.renderBoard(board_size, corner.getImage(), 
-                     side.getImage(), intersection.getImage())
+renderer = Renderer(screen)
+renderer.renderBoard(board)
 
 def debug(board):
     print board.ko
@@ -49,14 +41,13 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-#        elif event.type == pygame.MOUSEBUTTONUP:
-#            x, y = pygame.mouse.get_pos()
-#            turn = game_state.getTurn()
-#            pos = (x/IMAGE_SIZE, y/IMAGE_SIZE)
-#            if board.addStone(pos, turn):
-#                draw_board(board_size, screen, corner, side, intersection)
-#                draw_stones(screen, board, black_stone, white_stone)
-#                game_state.nextTurn()
-#        elif event.type == pygame.KEYDOWN:
-#            debug(board)
+        elif event.type == pygame.MOUSEBUTTONUP:
+            x, y = pygame.mouse.get_pos()
+            turn = game_state.getTurn()
+            pos = (x/IMAGE_SIZE, y/IMAGE_SIZE)
+            if board.addStone(pos, turn):
+                renderer.renderBoard(board)
+                game_state.nextTurn()
+        elif event.type == pygame.KEYDOWN:
+            debug(board)
 

@@ -17,13 +17,20 @@ class Group(object):
         for group in groups:
             self.stones |= group.stones
             self.liberties |= group.liberties
+    def getStones(self):
+        return self.stones
 
 class Board(object):
     """ Holds all information about all groups and size of the board """
     def __init__(self, size):
         self.size = size
         self.groups = set()
+        self.stones = {}
         self.ko = None
+    def getSize(self):
+        return self.size
+    def getStones(self):
+        return self.stones.items()
     def addGroup(self, color, pos, libs):
         new_group = Group(color)
         new_group.addStone(pos)
@@ -44,6 +51,7 @@ class Board(object):
             if group.inAtari():
                 liberties = self.freeLiberties(group, pos, liberties)
                 self.groups.remove(group)
+                self.removeStones(group.getStones())
         if not p1:
             self.addGroup(color, pos, liberties)
         else:
@@ -55,6 +63,7 @@ class Board(object):
             self.removeGroups(rest)
         for group in p2:
             group.liberties.remove(pos)
+        self.updateStones(pos, color)
         return True
     def getValidAdjPositions(self, pos):
         #returns positions in range of the board size
@@ -126,6 +135,12 @@ class Board(object):
             for stone in group.stones:
                 if pos == stone:
                     return True
+    def updateStones(self, pos, update):
+        self.stones[pos] = update
+    def removeStones(self, stone_positions):
+        for stone_position in stone_positions:
+            self.updateStones(stone_position, None)
+
 def shiftPos(pos, direction):
     x, y = pos; i, j = direction
     return (x+i, y+j)
