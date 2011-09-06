@@ -1,9 +1,8 @@
 import pygame
 import sys
 from logic import *
-from drawing import scale, Renderer
+from drawing import BLACK, WHITE, scale, Renderer
 
-BLACK = 0; WHITE = 1
 IMAGE_SIZE = 32
 
 class GameState(object):
