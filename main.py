@@ -1,7 +1,8 @@
 import pygame
 import sys
-from logic import *
-from drawing import BLACK, WHITE, scale, Renderer
+from board import Board
+from utility import Colors, scale
+from renderer import Renderer
 
 IMAGE_SIZE = 32
 
@@ -17,11 +18,11 @@ class GameState(object):
 pygame.init()
 running = True
 board_size = 19
-game_state = GameState(BLACK)
+game_state = GameState(Colors.black)
 board = Board(board_size)
 window_size = scale(IMAGE_SIZE, (board_size,)*2)
 screen = pygame.display.set_mode(window_size)
-renderer = Renderer(screen)
+renderer = Renderer(screen, IMAGE_SIZE)
 renderer.renderBoard(board)
 
 def debug(board):
@@ -44,7 +45,7 @@ while running:
             x, y = pygame.mouse.get_pos()
             turn = game_state.getTurn()
             pos = (x/IMAGE_SIZE, y/IMAGE_SIZE)
-            if board.addStone(pos, turn):
+            if board.addStoneToBoard(pos, turn):
                 renderer.renderBoard(board)
                 game_state.nextTurn()
         elif event.type == pygame.KEYDOWN:
